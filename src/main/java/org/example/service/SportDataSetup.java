@@ -1,7 +1,9 @@
-package org.example;
+package org.example.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.annotation.PostConstruct;
+import org.example.entity.Sport;
+import org.example.repository.SportRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -13,11 +15,26 @@ public class SportDataSetup {
     private final WebClient webClient;
     private final SportRepository sportRepository;
 
-    @Value("${rakuten.api.app-id}")
+    @Value("${rakuten.app-id}")
     private String appId;
 
-    public SportDataSetup(SportRepository sportRepository) {
-        this.webClient = WebClient.create("https://app.rakuten.co.jp");
+    @Value("${rakuten.affiliate-id}")
+    private String affiliateId;
+
+    @Value("${rakuten.app-secret}")
+    private String appSecret;
+
+    @Value("${rakuten.callback-domain}")
+    private String callbackDomain;
+
+    @Value("${rakuten.api-host}")
+    private String apiHost;
+
+    @Value("${rakuten.api-path}")
+    private String apiPath;
+
+    public SportDataSetup(WebClient.Builder webClientBuilder, SportRepository sportRepository) {
+        this.webClient = webClientBuilder.baseUrl("https://app.rakuten.co.jp/").build();
         this.sportRepository = sportRepository;
     }
 
@@ -25,15 +42,22 @@ public class SportDataSetup {
     public void fetchAndSaveSports() {
         webClient.get()
                 .uri(uriBuilder -> uriBuilder
-                        .path("/services/api/IchibaItem/Search/20170706")
+                        .scheme("https")
+                        .host(apiHost)
+                        .path(apiPath)
                         .queryParam("applicationId", appId)
                         .queryParam("keyword", "sport")
-                        .build()
-                )
+                        .queryParam("format", "json")
+                        .queryParam("genreId", "555086")
+                        .build())
+
                 .retrieve()
                 .bodyToMono(JsonNode.class)
                 .flatMapMany(json -> {
                     JsonNode items = json.path("Items");
+                    if (!items.isArray()) {
+                        return Flux.error(new RuntimeException("Unexpected response format: 'Items' is not an array"));
+                    }
                     return Flux.fromIterable(items)
                             .map(item -> {
                                 JsonNode itemNode = item.get("Item");
@@ -43,9 +67,8 @@ public class SportDataSetup {
                             });
                 })
                 .flatMap(sportRepository::save)
-                .subscribe(
-                        sport -> System.out.println("Saved sport: " + sport.getName()),
-                        error -> System.err.println("Error: " + error.getMessage())
-                );
+                .doOnNext(sport -> System.out.println("Saved sport: " + sport.getName()))
+                .doOnError(error -> System.err.println("Error: " + error.getMessage()))
+                .subscribe();
     }
 }
