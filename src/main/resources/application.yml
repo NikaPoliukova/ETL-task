@@ -1,0 +1,13 @@
+spring:
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/etl_db
+    username: postgres
+    password: your_password
+
+rakuten:
+  api:
+    app-id: YOUR_RAKUTEN_APP_ID
+
+logging:
+  level:
+    root: INFO
