@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Component
 public class SportDataSetup {
@@ -42,17 +43,18 @@ public class SportDataSetup {
     public void fetchAndSaveSports() {
         webClient.get()
                 .uri(uriBuilder -> uriBuilder
-                        .scheme("https")
-                        .host(apiHost)
                         .path(apiPath)
                         .queryParam("applicationId", appId)
+                        .queryParam("affiliateId", affiliateId)
+                        .queryParam("appSecret", appSecret)
+                        .queryParam("callbackDomain", callbackDomain)
                         .queryParam("keyword", "sport")
                         .queryParam("format", "json")
                         .queryParam("genreId", "555086")
                         .build())
-
                 .retrieve()
                 .bodyToMono(JsonNode.class)
+                .doOnNext(json -> System.out.println("Received JSON response " ))
                 .flatMapMany(json -> {
                     JsonNode items = json.path("Items");
                     if (!items.isArray()) {
@@ -61,12 +63,14 @@ public class SportDataSetup {
                     return Flux.fromIterable(items)
                             .map(item -> {
                                 JsonNode itemNode = item.get("Item");
-                                int id = itemNode.get("itemCode").asText().hashCode();
                                 String name = itemNode.get("itemName").asText();
-                                return new Sport(id, name);
+                                return new Sport(name);
                             });
                 })
-                .flatMap(sportRepository::save)
+                .flatMap(sport ->
+                        sportRepository.existsByName(sport.getName())
+                                .flatMap(exists -> exists ? Mono.empty() : sportRepository.save(sport))
+                )
                 .doOnNext(sport -> System.out.println("Saved sport: " + sport.getName()))
                 .doOnError(error -> System.err.println("Error: " + error.getMessage()))
                 .subscribe();

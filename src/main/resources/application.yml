@@ -4,6 +4,11 @@ spring:
     username: postgres
     password: 123456
 
+  data:
+    r2dbc:
+      repositories:
+        enabled: true
+
 rakuten:
   app-id: 1088439895795118344
   affiliate-id: 4888e03c.650fca1f.4888e03d.0d5cfe5c
@@ -14,4 +19,4 @@ rakuten:
 
 logging:
   level:
-    root: INFO
+    io.r2dbc.postgresql: DEBUG
