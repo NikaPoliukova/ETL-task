@@ -1,0 +1,22 @@
+spring:
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/etl_db
+    username: postgres
+    password: 123456
+
+  data:
+    r2dbc:
+      repositories:
+        enabled: true
+
+rakuten:
+  app-id: 1088439895795118344
+  affiliate-id: 4888e03c.650fca1f.4888e03d.0d5cfe5c
+  app-secret: 50ed365c9e413f318503dbf9e6ee263a896b760d
+  callback-domain: webservice.rakuten.co.jp
+  api-host: app.rakuten.co.jp
+  api-path: /services/api/IchibaItem/Search/20170706
+
+logging:
+  level:
+    io.r2dbc.postgresql: DEBUG
